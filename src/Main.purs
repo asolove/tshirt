@@ -7,7 +7,7 @@ import Control.Monad.State
 import Control.Monad.State.Class
 import Data.Array (drop, length, take, (:), filter, cons)
 import Data.ArrayBuffer.Typed (toArray)
-import Data.Foldable (traverse_, foldr)
+import Data.Foldable (traverse_, foldr, sum)
 import Data.Maybe.Unsafe (fromJust)
 import Graphics.Canvas (getCanvasElementById, getContext2D)
 import Graphics.Canvas.Free
@@ -41,6 +41,13 @@ countPixels :: Array Number -> Int
 countPixels pixels = withPixels pixels single (+) 0
   where single _ = 1
 
+countWhitePixels :: Array Number -> Int
+countWhitePixels pixels = withPixels pixels isWhite (+) 0
+  where isWhite xs = if sum xs > 254.0 * 4.0 then 1 else 0
+
+lastPixel :: Array Number -> Array Number
+lastPixel pixels = withPixels pixels id (\a b -> a) []
+
 withPixels :: forall a b. Array Number -> 
               (Array Number -> a) ->
               (a -> b -> b) ->
@@ -51,7 +58,7 @@ withPixels pixels withPixel combine start = (foldr eachPixelComponent startState
         eachPixelComponent pc state = 
           if length state.pixel < 3
             then { pixel: cons pc state.pixel, result: state.result }
-            else { pixel: [], result: combine (withPixel state.pixel) state.result }
+            else { pixel: [], result: combine (withPixel (cons pc state.pixel)) state.result }
 
 
 main = do
@@ -67,11 +74,11 @@ main = do
     setStrokeStyle "#FFFFFF"
     traverse_ arcAboveRobot [20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 100.0]
 
-    getImageData 250.0 200.0 100.0 50.0
+    getImageData  0.0 0.0 width height
 
-  logAny $ countPixels2 (toArray imageData.data)
+  logAny $ countWhitePixels (toArray imageData.data)
 
-  logAny $ countPixels (toArray imageData.data)
+  logAny $ lastPixel (toArray imageData.data)
     
 arcAboveRobot r = do
   moveTo (centerX-r) centerY

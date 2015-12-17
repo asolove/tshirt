@@ -34,6 +34,18 @@ var PS = { };
       return x * y | 0;
     };
   };
+
+  exports.numAdd = function (n1) {
+    return function (n2) {
+      return n1 + n2;
+    };
+  };
+
+  exports.numMul = function (n1) {
+    return function (n2) {
+      return n1 * n2;
+    };
+  };
  
 })(PS["Prelude"] = PS["Prelude"] || {});
 (function(exports) {
@@ -81,7 +93,8 @@ var PS = { };
   var unit = {};
   var show = function (dict) {
       return dict.show;
-  };                                                                            
+  };             
+  var semiringNumber = new Semiring($foreign.numAdd, $foreign.numMul, 1.0, 0.0);
   var semiringInt = new Semiring($foreign.intAdd, $foreign.intMul, 1, 0);
   var semigroupoidFn = new Semigroupoid(function (f) {
       return function (g) {
@@ -201,7 +214,8 @@ var PS = { };
   exports["semigroupoidFn"] = semigroupoidFn;
   exports["categoryFn"] = categoryFn;
   exports["functorArray"] = functorArray;
-  exports["semiringInt"] = semiringInt;;
+  exports["semiringInt"] = semiringInt;
+  exports["semiringNumber"] = semiringNumber;;
  
 })(PS["Prelude"] = PS["Prelude"] || {});
 (function(exports) {
@@ -515,6 +529,11 @@ var PS = { };
   };
   var foldl = function (dict) {
       return dict.foldl;
+  };
+  var sum = function (__dict_Foldable_18) {
+      return function (__dict_Semiring_19) {
+          return foldl(__dict_Foldable_18)(Prelude["+"](__dict_Semiring_19))(Prelude.zero(__dict_Semiring_19));
+      };
   }; 
   var foldMapDefaultR = function (__dict_Foldable_26) {
       return function (__dict_Monoid_27) {
@@ -536,6 +555,7 @@ var PS = { };
       return dict.foldMap;
   };
   exports["Foldable"] = Foldable;
+  exports["sum"] = sum;
   exports["traverse_"] = traverse_;
   exports["foldMapDefaultR"] = foldMapDefaultR;
   exports["foldMap"] = foldMap;
@@ -2693,10 +2713,10 @@ var PS = { };
                           if (!_5) {
                               return {
                                   pixel: [  ], 
-                                  result: combine(withPixel(state.pixel))(state.result)
+                                  result: combine(withPixel(Data_Array.cons(pc)(state.pixel)))(state.result)
                               };
                           };
-                          throw new Error("Failed pattern match at Main line 44, column 1 - line 49, column 1: " + [ _5.constructor.name ]);
+                          throw new Error("Failed pattern match at Main line 51, column 1 - line 56, column 1: " + [ _5.constructor.name ]);
                       };
                   };
                   return (Data_Foldable.foldr(Data_Foldable.foldableArray)(eachPixelComponent)(startState)(pixels)).result;
@@ -2717,10 +2737,30 @@ var PS = { };
           throw new Error("Failed pattern match: " + [ _6.constructor.name ]);
       };
   };
+  var lastPixel = function (pixels) {
+      return withPixels(pixels)(Prelude.id(Prelude.categoryFn))(function (a) {
+          return function (b) {
+              return a;
+          };
+      })([  ]);
+  };
   var isWhite = function (_3) {
       return true;
   };
   var height = 250.0;
+  var countWhitePixels = function (pixels) {
+      var isWhite_1 = function (xs) {
+          var _7 = Data_Foldable.sum(Data_Foldable.foldableArray)(Prelude.semiringNumber)(xs) > 254.0 * 4.0;
+          if (_7) {
+              return 1;
+          };
+          if (!_7) {
+              return 0;
+          };
+          throw new Error("Failed pattern match at Main line 46, column 9 - line 48, column 1: " + [ _7.constructor.name ]);
+      };
+      return withPixels(pixels)(isWhite_1)(Prelude["+"](Prelude.semiringInt))(0);
+  };
   var countPixels2 = function (pixels) {
       return Data_Array.length(Prelude.map(Prelude.functorArray)(isWhite)(partition(4)(pixels)));
   };
@@ -2758,18 +2798,20 @@ var PS = { };
               return Prelude.bind(Control_Monad_Free.bindFree(Data_Coyoneda.functorCoyoneda))(Graphics_Canvas_Free.fill)(function () {
                   return Prelude.bind(Control_Monad_Free.bindFree(Data_Coyoneda.functorCoyoneda))(Graphics_Canvas_Free.setStrokeStyle("#FFFFFF"))(function () {
                       return Prelude.bind(Control_Monad_Free.bindFree(Data_Coyoneda.functorCoyoneda))(Data_Foldable.traverse_(Control_Monad_Free.applicativeFree(Data_Coyoneda.functorCoyoneda))(Data_Foldable.foldableArray)(arcAboveRobot)([ 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 100.0 ]))(function () {
-                          return Graphics_Canvas_Free.getImageData(250.0)(200.0)(100.0)(50.0);
+                          return Graphics_Canvas_Free.getImageData(0.0)(0.0)(width)(height);
                       });
                   });
               });
           });
       }))();
-      Control_Monad_Eff_Console_Unsafe.logAny(countPixels2(Data_ArrayBuffer_Typed.toArray(_0.data)))();
-      return Control_Monad_Eff_Console_Unsafe.logAny(countPixels(Data_ArrayBuffer_Typed.toArray(_0.data)))();
+      Control_Monad_Eff_Console_Unsafe.logAny(countWhitePixels(Data_ArrayBuffer_Typed.toArray(_0.data)))();
+      return Control_Monad_Eff_Console_Unsafe.logAny(lastPixel(Data_ArrayBuffer_Typed.toArray(_0.data)))();
   };
   exports["arcAboveRobot"] = arcAboveRobot;
   exports["main"] = main;
   exports["withPixels"] = withPixels;
+  exports["lastPixel"] = lastPixel;
+  exports["countWhitePixels"] = countWhitePixels;
   exports["countPixels"] = countPixels;
   exports["isWhite"] = isWhite;
   exports["countPixels2"] = countPixels2;
