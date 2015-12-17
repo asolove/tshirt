@@ -32,12 +32,9 @@ partition n as = if length as < n
                   then []
                   else take n as : partition n (drop n as)
 
-colors :: Graphics.Canvas.ImageData -> Array Color
-colors imageData = map toColor quartets
-  where toColor [r,g,b,a] = { r: r, g: g, b: b, a: a }
-        quartets = partition 4 (toArray imageData.data)
+countPixels2 pixels = length $ map isWhite $ partition 4 pixels
 
-isWhite :: Color -> Boolean
+isWhite :: Array Number -> Boolean
 isWhite _ = true
 
 countPixels :: Array Number -> Int
@@ -72,7 +69,8 @@ main = do
 
     getImageData 250.0 200.0 100.0 50.0
 
-  -- logAny (length (filter isWhite (colors imageData)))
+  logAny $ countPixels2 (toArray imageData.data)
+
   logAny $ countPixels (toArray imageData.data)
     
 arcAboveRobot r = do

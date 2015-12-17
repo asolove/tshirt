@@ -2683,20 +2683,20 @@ var PS = { };
                   };
                   var eachPixelComponent = function (pc) {
                       return function (state) {
-                          var _6 = Data_Array.length(state.pixel) < 3;
-                          if (_6) {
+                          var _5 = Data_Array.length(state.pixel) < 3;
+                          if (_5) {
                               return {
                                   pixel: Data_Array.cons(pc)(state.pixel), 
                                   result: state.result
                               };
                           };
-                          if (!_6) {
+                          if (!_5) {
                               return {
                                   pixel: [  ], 
                                   result: combine(withPixel(state.pixel))(state.result)
                               };
                           };
-                          throw new Error("Failed pattern match at Main line 47, column 1 - line 52, column 1: " + [ _6.constructor.name ]);
+                          throw new Error("Failed pattern match at Main line 44, column 1 - line 49, column 1: " + [ _5.constructor.name ]);
                       };
                   };
                   return (Data_Foldable.foldr(Data_Foldable.foldableArray)(eachPixelComponent)(startState)(pixels)).result;
@@ -2707,40 +2707,28 @@ var PS = { };
   var width = 500.0;
   var partition = function (n) {
       return function (as) {
-          var _7 = Data_Array.length(as) < n;
-          if (_7) {
+          var _6 = Data_Array.length(as) < n;
+          if (_6) {
               return [  ];
           };
-          if (!_7) {
+          if (!_6) {
               return Data_Array[":"](Data_Array.take(n)(as))(partition(n)(Data_Array.drop(n)(as)));
           };
-          throw new Error("Failed pattern match: " + [ _7.constructor.name ]);
+          throw new Error("Failed pattern match: " + [ _6.constructor.name ]);
       };
   };
   var isWhite = function (_3) {
       return true;
   };
   var height = 250.0;
+  var countPixels2 = function (pixels) {
+      return Data_Array.length(Prelude.map(Prelude.functorArray)(isWhite)(partition(4)(pixels)));
+  };
   var countPixels = function (pixels) {
-      var single = function (_5) {
+      var single = function (_4) {
           return 1;
       };
       return withPixels(pixels)(single)(Prelude["+"](Prelude.semiringInt))(0);
-  };
-  var colors = function (imageData) {
-      var toColor = function (_4) {
-          if (_4.length === 4) {
-              return {
-                  r: _4[0], 
-                  g: _4[1], 
-                  b: _4[2], 
-                  a: _4[3]
-              };
-          };
-          throw new Error("Failed pattern match at Main line 38, column 9 - line 40, column 1: " + [ _4.constructor.name ]);
-      };
-      var quartets = partition(4)(Data_ArrayBuffer_Typed.toArray(imageData.data));
-      return Prelude.map(Prelude.functorArray)(toColor)(quartets);
   };
   var centerY = 200.0;
   var centerX = 250.0;
@@ -2776,6 +2764,7 @@ var PS = { };
               });
           });
       }))();
+      Control_Monad_Eff_Console_Unsafe.logAny(countPixels2(Data_ArrayBuffer_Typed.toArray(_0.data)))();
       return Control_Monad_Eff_Console_Unsafe.logAny(countPixels(Data_ArrayBuffer_Typed.toArray(_0.data)))();
   };
   exports["arcAboveRobot"] = arcAboveRobot;
@@ -2783,7 +2772,7 @@ var PS = { };
   exports["withPixels"] = withPixels;
   exports["countPixels"] = countPixels;
   exports["isWhite"] = isWhite;
-  exports["colors"] = colors;
+  exports["countPixels2"] = countPixels2;
   exports["partition"] = partition;
   exports["centerY"] = centerY;
   exports["centerX"] = centerX;
