@@ -3,7 +3,9 @@ module Main where
 import Prelude
 
 import Control.Monad.Eff.Console.Unsafe (logAny)
-import Data.Array (drop, length, take, (:), filter)
+import Control.Monad.State
+import Control.Monad.State.Class
+import Data.Array (drop, length, take, (:), filter, cons)
 import Data.ArrayBuffer.Typed (toArray)
 import Data.Foldable (traverse_)
 import Data.Maybe.Unsafe (fromJust)
@@ -37,6 +39,15 @@ colors imageData = map toColor quartets
 
 isWhite :: Color -> Boolean
 isWhite { r: r, g: g, b: b, a: a } = r + g + b >= 254.0 * 3.0
+
+countPixels :: Number -> State { pcs :: Array Number, count :: Int } Unit
+countPixels pc = put newState
+  where state = get
+        pcs = state.pcs
+        count = state.count
+        newState = if length pcs < 3 
+                    then { pcs: cons pc pcs, count: count }
+                    else { pcs: [], count: count + 1 } 
 
 main = do
   canvas <- getCanvasElementById "canvas"
