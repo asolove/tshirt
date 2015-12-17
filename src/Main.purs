@@ -7,7 +7,7 @@ import Control.Monad.State
 import Control.Monad.State.Class
 import Data.Array (drop, length, take, (:), filter, cons)
 import Data.ArrayBuffer.Typed (toArray)
-import Data.Foldable (traverse_)
+import Data.Foldable (traverse_, foldr)
 import Data.Maybe.Unsafe (fromJust)
 import Graphics.Canvas (getCanvasElementById, getContext2D)
 import Graphics.Canvas.Free
@@ -38,16 +38,24 @@ colors imageData = map toColor quartets
         quartets = partition 4 (toArray imageData.data)
 
 isWhite :: Color -> Boolean
-isWhite { r: r, g: g, b: b, a: a } = r + g + b >= 254.0 * 3.0
+isWhite _ = true
 
-countPixels :: Number -> State { pcs :: Array Number, count :: Int } Unit
-countPixels pc = put newState
-  where state = get
-        pcs = state.pcs
-        count = state.count
-        newState = if length pcs < 3 
-                    then { pcs: cons pc pcs, count: count }
-                    else { pcs: [], count: count + 1 } 
+countPixels :: Array Number -> Int
+countPixels pixels = withPixels pixels single (+) 0
+  where single _ = 1
+
+withPixels :: forall a b. Array Number -> 
+              (Array Number -> a) ->
+              (a -> b -> b) ->
+              b ->
+              b
+withPixels pixels withPixel combine start = (foldr eachPixelComponent startState pixels).result
+  where startState = { pixel: [], result: start }
+        eachPixelComponent pc state = 
+          if length state.pixel < 3
+            then { pixel: cons pc state.pixel, result: state.result }
+            else { pixel: [], result: combine (withPixel state.pixel) state.result }
+
 
 main = do
   canvas <- getCanvasElementById "canvas"
@@ -62,9 +70,10 @@ main = do
     setStrokeStyle "#FFFFFF"
     traverse_ arcAboveRobot [20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 100.0]
 
-    getImageData 250.0 200.0 50.0 50.0
+    getImageData 250.0 200.0 100.0 50.0
 
-  logAny (length (filter isWhite (colors imageData)))
+  -- logAny (length (filter isWhite (colors imageData)))
+  logAny $ countPixels (toArray imageData.data)
     
 arcAboveRobot r = do
   moveTo (centerX-r) centerY

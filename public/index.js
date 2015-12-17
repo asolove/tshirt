@@ -18,6 +18,22 @@ var PS = { };
       return result;
     };
   };
+
+  //- Semiring -------------------------------------------------------------------
+
+  exports.intAdd = function (x) {
+    return function (y) {
+      /* jshint bitwise: false */
+      return x + y | 0;
+    };
+  };
+
+  exports.intMul = function (x) {
+    return function (y) {
+      /* jshint bitwise: false */
+      return x * y | 0;
+    };
+  };
  
 })(PS["Prelude"] = PS["Prelude"] || {});
 (function(exports) {
@@ -50,13 +66,23 @@ var PS = { };
       this["__superclass_Prelude.Applicative_0"] = __superclass_Prelude$dotApplicative_0;
       this["__superclass_Prelude.Bind_1"] = __superclass_Prelude$dotBind_1;
   };
+  var Semiring = function (add, mul, one, zero) {
+      this.add = add;
+      this.mul = mul;
+      this.one = one;
+      this.zero = zero;
+  };
   var Show = function (show) {
       this.show = show;
+  };
+  var zero = function (dict) {
+      return dict.zero;
   };                                                                           
   var unit = {};
   var show = function (dict) {
       return dict.show;
-  };                                                                     
+  };                                                                            
+  var semiringInt = new Semiring($foreign.intAdd, $foreign.intMul, 1, 0);
   var semigroupoidFn = new Semigroupoid(function (f) {
       return function (g) {
           return function (x) {
@@ -69,6 +95,12 @@ var PS = { };
   };
   var $$return = function (__dict_Applicative_2) {
       return pure(__dict_Applicative_2);
+  };                   
+  var one = function (dict) {
+      return dict.one;
+  };
+  var mul = function (dict) {
+      return dict.mul;
   };
   var map = function (dict) {
       return dict.map;
@@ -128,8 +160,15 @@ var PS = { };
               });
           };
       };
+  }; 
+  var add = function (dict) {
+      return dict.add;
+  };
+  var $plus = function (__dict_Semiring_31) {
+      return add(__dict_Semiring_31);
   };
   exports["Show"] = Show;
+  exports["Semiring"] = Semiring;
   exports["Monad"] = Monad;
   exports["Bind"] = Bind;
   exports["Applicative"] = Applicative;
@@ -138,6 +177,11 @@ var PS = { };
   exports["Category"] = Category;
   exports["Semigroupoid"] = Semigroupoid;
   exports["show"] = show;
+  exports["+"] = $plus;
+  exports["one"] = one;
+  exports["mul"] = mul;
+  exports["zero"] = zero;
+  exports["add"] = add;
   exports["<>"] = $less$greater;
   exports["append"] = append;
   exports["ap"] = ap;
@@ -156,7 +200,8 @@ var PS = { };
   exports["unit"] = unit;
   exports["semigroupoidFn"] = semigroupoidFn;
   exports["categoryFn"] = categoryFn;
-  exports["functorArray"] = functorArray;;
+  exports["functorArray"] = functorArray;
+  exports["semiringInt"] = semiringInt;;
  
 })(PS["Prelude"] = PS["Prelude"] || {});
 (function(exports) {
@@ -921,12 +966,6 @@ var PS = { };
     return result;
   };
 
-  exports.filter = function (f) {
-    return function (xs) {
-      return xs.filter(f);
-    };
-  };
-
   //------------------------------------------------------------------------------
   // Subarrays -------------------------------------------------------------------
   //------------------------------------------------------------------------------
@@ -997,7 +1036,7 @@ var PS = { };
   exports["take"] = take;
   exports[":"] = $colon;
   exports["drop"] = $foreign.drop;
-  exports["filter"] = $foreign.filter;
+  exports["cons"] = $foreign.cons;
   exports["length"] = $foreign.length;;
  
 })(PS["Data.Array"] = PS["Data.Array"] || {});
@@ -2623,6 +2662,8 @@ var PS = { };
   var $$Math = PS["Math"];
   var Prelude = PS["Prelude"];
   var Control_Monad_Eff_Console_Unsafe = PS["Control.Monad.Eff.Console.Unsafe"];
+  var Control_Monad_State = PS["Control.Monad.State"];
+  var Control_Monad_State_Class = PS["Control.Monad.State.Class"];
   var Data_Array = PS["Data.Array"];
   var Data_ArrayBuffer_Typed = PS["Data.ArrayBuffer.Typed"];
   var Data_Foldable = PS["Data.Foldable"];
@@ -2632,23 +2673,60 @@ var PS = { };
   var Control_Monad_Free = PS["Control.Monad.Free"];
   var Data_Coyoneda = PS["Data.Coyoneda"];
   var Control_Monad_Eff = PS["Control.Monad.Eff"];     
+  var withPixels = function (pixels) {
+      return function (withPixel) {
+          return function (combine) {
+              return function (start) {
+                  var startState = {
+                      pixel: [  ], 
+                      result: start
+                  };
+                  var eachPixelComponent = function (pc) {
+                      return function (state) {
+                          var _6 = Data_Array.length(state.pixel) < 3;
+                          if (_6) {
+                              return {
+                                  pixel: Data_Array.cons(pc)(state.pixel), 
+                                  result: state.result
+                              };
+                          };
+                          if (!_6) {
+                              return {
+                                  pixel: [  ], 
+                                  result: combine(withPixel(state.pixel))(state.result)
+                              };
+                          };
+                          throw new Error("Failed pattern match at Main line 47, column 1 - line 52, column 1: " + [ _6.constructor.name ]);
+                      };
+                  };
+                  return (Data_Foldable.foldr(Data_Foldable.foldableArray)(eachPixelComponent)(startState)(pixels)).result;
+              };
+          };
+      };
+  };
   var width = 500.0;
   var partition = function (n) {
       return function (as) {
-          var _5 = Data_Array.length(as) < n;
-          if (_5) {
+          var _7 = Data_Array.length(as) < n;
+          if (_7) {
               return [  ];
           };
-          if (!_5) {
+          if (!_7) {
               return Data_Array[":"](Data_Array.take(n)(as))(partition(n)(Data_Array.drop(n)(as)));
           };
-          throw new Error("Failed pattern match: " + [ _5.constructor.name ]);
+          throw new Error("Failed pattern match: " + [ _7.constructor.name ]);
       };
   };
   var isWhite = function (_3) {
-      return _3.r + _3.g + _3.b >= 254.0 * 3.0;
+      return true;
   };
   var height = 250.0;
+  var countPixels = function (pixels) {
+      var single = function (_5) {
+          return 1;
+      };
+      return withPixels(pixels)(single)(Prelude["+"](Prelude.semiringInt))(0);
+  };
   var colors = function (imageData) {
       var toColor = function (_4) {
           if (_4.length === 4) {
@@ -2659,7 +2737,7 @@ var PS = { };
                   a: _4[3]
               };
           };
-          throw new Error("Failed pattern match at Main line 36, column 9 - line 38, column 1: " + [ _4.constructor.name ]);
+          throw new Error("Failed pattern match at Main line 38, column 9 - line 40, column 1: " + [ _4.constructor.name ]);
       };
       var quartets = partition(4)(Data_ArrayBuffer_Typed.toArray(imageData.data));
       return Prelude.map(Prelude.functorArray)(toColor)(quartets);
@@ -2692,16 +2770,18 @@ var PS = { };
               return Prelude.bind(Control_Monad_Free.bindFree(Data_Coyoneda.functorCoyoneda))(Graphics_Canvas_Free.fill)(function () {
                   return Prelude.bind(Control_Monad_Free.bindFree(Data_Coyoneda.functorCoyoneda))(Graphics_Canvas_Free.setStrokeStyle("#FFFFFF"))(function () {
                       return Prelude.bind(Control_Monad_Free.bindFree(Data_Coyoneda.functorCoyoneda))(Data_Foldable.traverse_(Control_Monad_Free.applicativeFree(Data_Coyoneda.functorCoyoneda))(Data_Foldable.foldableArray)(arcAboveRobot)([ 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 100.0 ]))(function () {
-                          return Graphics_Canvas_Free.getImageData(250.0)(200.0)(50.0)(50.0);
+                          return Graphics_Canvas_Free.getImageData(250.0)(200.0)(100.0)(50.0);
                       });
                   });
               });
           });
       }))();
-      return Control_Monad_Eff_Console_Unsafe.logAny(Data_Array.length(Data_Array.filter(isWhite)(colors(_0))))();
+      return Control_Monad_Eff_Console_Unsafe.logAny(countPixels(Data_ArrayBuffer_Typed.toArray(_0.data)))();
   };
   exports["arcAboveRobot"] = arcAboveRobot;
   exports["main"] = main;
+  exports["withPixels"] = withPixels;
+  exports["countPixels"] = countPixels;
   exports["isWhite"] = isWhite;
   exports["colors"] = colors;
   exports["partition"] = partition;
