@@ -3,11 +3,10 @@ module Main where
 import Prelude
 
 import Control.Monad.Eff.Console.Unsafe (logAny)
-import Control.Monad.State
-import Control.Monad.State.Class
-import Data.Array (drop, length, take, (:), filter, cons)
+import Data.Array (cons, length)
 import Data.ArrayBuffer.Typed (toArray)
-import Data.Foldable (traverse_, foldr, sum)
+import Data.Foldable
+import Data.Tuple
 import Data.Maybe.Unsafe (fromJust)
 import Graphics.Canvas (getCanvasElementById, getContext2D)
 import Graphics.Canvas.Free
@@ -25,41 +24,36 @@ centerX = 250.0
 centerY :: Number
 centerY = 200.0
 
-type Color = { r :: Number, g :: Number, b :: Number, a :: Number }
-
-partition :: forall a. Int -> Array a -> Array (Array a)
-partition n as = if length as < n
-                  then []
-                  else take n as : partition n (drop n as)
-
-countPixels2 pixels = length $ map isWhite $ partition 4 pixels
-
-isWhite :: Array Number -> Boolean
-isWhite _ = true
-
 countPixels :: Array Number -> Int
-countPixels pixels = withPixels pixels single (+) 0
+countPixels pixels = foldPixels single (+) 0 pixels
   where single _ = 1
 
 countWhitePixels :: Array Number -> Int
-countWhitePixels pixels = withPixels pixels isWhite (+) 0
-  where isWhite xs = if sum xs > 254.0 * 4.0 then 1 else 0
+countWhitePixels pixels = foldPixels isWhite (+) 0 pixels
+  where isWhite [r,g,b,a] = if r + g + b > 254.0 * 3.0 then 1 else 0
 
 lastPixel :: Array Number -> Array Number
-lastPixel pixels = withPixels pixels id (\a b -> a) []
+lastPixel pixels = foldPixels id (\a b -> a) [] pixels
 
-withPixels :: forall a b. Array Number -> 
-              (Array Number -> a) ->
-              (a -> b -> b) ->
-              b ->
-              b
-withPixels pixels withPixel combine start = (foldr eachPixelComponent startState pixels).result
-  where startState = { pixel: [], result: start }
-        eachPixelComponent pc state = 
-          if length state.pixel < 3
-            then { pixel: cons pc state.pixel, result: state.result }
-            else { pixel: [], result: combine (withPixel (cons pc state.pixel)) state.result }
+-- | Reduce an array of pixel data to a single value
+-- |  -  f: a function given an array of four ints, [r,g,b,a] that returns a value for that pixel
+-- |  -  c: a fold function that combines each pixel's value into the final result
+-- |  -  u: the starting value for the fold
+-- |  -  xs: the array of pixel data
+foldPixels :: forall a b c f. (Foldable f) => (Array a -> b) -> (b -> c -> c) -> c -> f a -> c
+foldPixels = foldrN 4
 
+foldrN :: forall a b c f. (Foldable f) =>
+              Int ->
+              (Array a -> b) ->
+              (b -> c -> c) ->
+              c ->
+              f a ->
+              c
+foldrN n f c u xs = snd (foldr step start xs)
+  where start = Tuple [] u
+        step x (Tuple xs res) | length xs == n-1 = Tuple [] (c (f (cons x xs)) res)
+                              | otherwise        = Tuple (cons x xs) res
 
 main = do
   canvas <- getCanvasElementById "canvas"
@@ -79,6 +73,9 @@ main = do
   logAny $ countWhitePixels (toArray imageData.data)
 
   logAny $ lastPixel (toArray imageData.data)
+
+  runGraphics context $ do
+    putImageData imageData centerX 0.0
     
 arcAboveRobot r = do
   moveTo (centerX-r) centerY
