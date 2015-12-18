@@ -3,13 +3,14 @@ module Main where
 import Prelude
 
 import Control.Monad.Eff.Console.Unsafe (logAny)
-import Data.Array (cons, length)
+import Data.Array (cons, length, (..))
 import Data.ArrayBuffer.Typed (toArray)
 import Data.Foldable
+import Data.Int (toNumber)
 import Data.Tuple
 import Data.Maybe.Unsafe (fromJust)
-import Graphics.Canvas (getCanvasElementById, getContext2D)
-import Graphics.Canvas.Free
+import Graphics.Canvas (getCanvasElementById, getContext2D, setCanvasHeight, setCanvasWidth, putImageData)
+import Graphics.Canvas.Free (setFillStyle, setStrokeStyle, runGraphics, moveTo, arc, rect, fill, stroke, getImageData)
 
 
 height :: Number
@@ -66,18 +67,27 @@ main = do
     fill
 
     setStrokeStyle "#FFFFFF"
-    traverse_ arcAboveRobot [20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 100.0]
+    traverse_ arcAboveRobot (map ((*20) >>> toNumber) (1..20))
 
-    getImageData  0.0 0.0 width height
+    getImageData  20.0 20.0 30.0 30.0
 
   logAny $ countWhitePixels (toArray imageData.data)
 
   logAny $ lastPixel (toArray imageData.data)
 
-  runGraphics context $ do
-    putImageData imageData centerX 0.0
+  c2 <- getCanvasElementById "partial"
+  drawImageData imageData (fromJust c2)
     
+
+drawImageData imageData canvas = do
+  context <- getContext2D canvas
+  setCanvasWidth (toNumber imageData.width) canvas
+  setCanvasHeight (toNumber imageData.height) canvas
+  putImageData context imageData 0.0 0.0
+
+
 arcAboveRobot r = do
   moveTo (centerX-r) centerY
   arc { x: centerX, y: centerY, r: r, start: Math.pi, end: 0.0 }
   stroke
+
