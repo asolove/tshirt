@@ -9,7 +9,7 @@ import Data.Foldable
 import Data.Int (toNumber)
 import Data.Tuple
 import Data.Maybe.Unsafe (fromJust)
-import Graphics.Canvas (getCanvasElementById, getContext2D, setCanvasHeight, setCanvasWidth, putImageData)
+import Graphics.Canvas (getCanvasElementById, getContext2D, setCanvasHeight, setCanvasWidth, putImageData, withImage, drawImage)
 import Graphics.Canvas.Free (setFillStyle, setStrokeStyle, runGraphics, moveTo, arc, rect, fill, stroke, getImageData)
 
 
@@ -17,13 +17,13 @@ height :: Number
 height = 250.0
 
 width :: Number
-width = 500.0
+width = 510.0
 
 centerX :: Number
-centerX = 250.0
+centerX = 255.0
 
 centerY :: Number
-centerY = 200.0
+centerY = 230.0
 
 countPixels :: Array Number -> Int
 countPixels pixels = foldPixels single (+) 0 pixels
@@ -57,26 +57,28 @@ foldrN n f c u xs = snd (foldr step start xs)
                               | otherwise        = Tuple (cons x xs) res
 
 main = do
-  canvas <- getCanvasElementById "canvas"
-  context <- getContext2D $ fromJust canvas
+  maybeCanvas <- getCanvasElementById "canvas"
+  let canvas = fromJust maybeCanvas
+  setCanvasHeight height canvas
+  setCanvasWidth width canvas
+  context <- getContext2D canvas
+  withImage "tshirt.jpg" $ \img -> do
+    drawImage context img 0.0 0.0
 
-  imageData <- runGraphics context $ do
-    -- Canvas API calls will go here
-    setFillStyle "#999999"
-    rect { x: 0.0, y: 0.0, w: width, h: height }
-    fill
+    imageData <- runGraphics context $ do
+      setStrokeStyle "#FFFFFF"
+      traverse_ arcAboveRobot (map ((*20) >>> toNumber) (1..20))
 
-    setStrokeStyle "#FFFFFF"
-    traverse_ arcAboveRobot (map ((*20) >>> toNumber) (1..20))
+      getImageData  20.0 20.0 30.0 30.0
 
-    getImageData  20.0 20.0 30.0 30.0
+    logAny $ countWhitePixels (toArray imageData.data)
 
-  logAny $ countWhitePixels (toArray imageData.data)
+    logAny $ lastPixel (toArray imageData.data)
 
-  logAny $ lastPixel (toArray imageData.data)
+    c2 <- getCanvasElementById "partial"
+    drawImageData imageData (fromJust c2)
+    return unit
 
-  c2 <- getCanvasElementById "partial"
-  drawImageData imageData (fromJust c2)
     
 
 drawImageData imageData canvas = do
