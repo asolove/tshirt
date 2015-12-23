@@ -9,9 +9,7 @@ import Data.Foldable
 import Data.Int (toNumber)
 import Data.Tuple
 import Data.Maybe.Unsafe (fromJust)
-import Graphics.Canvas (getCanvasElementById, getContext2D, setCanvasHeight, setCanvasWidth, putImageData, withImage, drawImage)
-import Graphics.Canvas.Free (setFillStyle, setStrokeStyle, runGraphics, moveTo, arc, rect, fill, stroke, getImageData)
-
+import Graphics.Canvas
 
 height :: Number
 height = 250.0
@@ -25,16 +23,12 @@ centerX = 255.0
 centerY :: Number
 centerY = 230.0
 
-countPixels :: Array Number -> Int
-countPixels pixels = foldPixels single (+) 0 pixels
-  where single _ = 1
 
 countWhitePixels :: Array Number -> Int
 countWhitePixels pixels = foldPixels isWhite (+) 0 pixels
   where isWhite [r,g,b,a] = if r + g + b > 254.0 * 3.0 then 1 else 0
 
-lastPixel :: Array Number -> Array Number
-lastPixel pixels = foldPixels id (\a b -> a) [] pixels
+
 
 -- | Reduce an array of pixel data to a single value
 -- |  -  f: a function given an array of four ints, [r,g,b,a] that returns a value for that pixel
@@ -59,21 +53,19 @@ foldrN n f c u xs = snd (foldr step start xs)
 main = do
   maybeCanvas <- getCanvasElementById "canvas"
   let canvas = fromJust maybeCanvas
+  context <- getContext2D canvas
+
   setCanvasHeight height canvas
   setCanvasWidth width canvas
-  context <- getContext2D canvas
+
   withImage "tshirt.jpg" $ \img -> do
     drawImage context img 0.0 0.0
 
-    imageData <- runGraphics context $ do
-      setStrokeStyle "#FFFFFF"
-      traverse_ arcAboveRobot (map ((*20) >>> toNumber) (1..20))
+    setStrokeStyle "#FFFFFF" context
+    traverse_ (arcAboveRobot context) (map ((*15) >>> toNumber) (1..16))
 
-      getImageData  20.0 20.0 30.0 30.0
-
+    imageData <- getImageData context 200.0 100.0 30.0 30.0
     logAny $ countWhitePixels (toArray imageData.data)
-
-    logAny $ lastPixel (toArray imageData.data)
 
     c2 <- getCanvasElementById "partial"
     drawImageData imageData (fromJust c2)
@@ -88,8 +80,8 @@ drawImageData imageData canvas = do
   putImageData context imageData 0.0 0.0
 
 
-arcAboveRobot r = do
-  moveTo (centerX-r) centerY
-  arc { x: centerX, y: centerY, r: r, start: Math.pi, end: 0.0 }
-  stroke
+arcAboveRobot context r = do
+  moveTo context (centerX-r) centerY
+  bezierCurveTo { cp1x: centerX-r, cp1y: centerY-(r*1.2), cp2x: centerX+r, cp2y: centerY-(r*1.2), x: centerX+r, y: centerY } context
+  stroke context
 
